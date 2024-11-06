@@ -81,6 +81,7 @@ for(j in 1:125){
   Power_stat = Result3$stat^2
   asd1 = ifelse(Power_stat>=2*log(p) + 2*sqrt(log(n))*log(log(p)),Power_stat,0)
   probe_active = probe[which(asd1!=0)]
+  length_id = 1
   if(length(probe_active)!=0)
   {
     probe_id = c(HDGO$GO_term[j],probe_active)
@@ -94,7 +95,7 @@ for(j in 1:125){
   # Zhong and Chen 2011
   TstatsZC1 = zhongchen2011(X = x, y = y1, beta = 0, delta = 0, Sigma = NULL, small.sig = NULL, T0 = FALSE)
 #####################
-  Record_y1_stat = rbind(Record_y1_stat, c(HDGO$GO_term[j],stat_full, stat_full+PE,TstatsZC1[2]))
+  Record_y1_stat = rbind(Record_y1_stat, c(HDGO$GO_term[j],abs(stat_full), abs(stat_full)+PE,abs(TstatsZC1[2])))
   print(c(j,HDGO$GO_term[j],stat_full, stat_full+PE,TstatsZC1[2],probe_active))
   write.csv(Record_probe,"FULL_Y1_probe.csv")
   write.csv(Record_y1_stat,paste("FULL_Y1_stat.csv",sep=""))
