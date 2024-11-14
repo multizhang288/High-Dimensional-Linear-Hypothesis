@@ -90,7 +90,7 @@ Inference2 = function(X,Y,spilit,seednum)#For n=200,p<=400 moderate dimensional 
     W1[,k] = W1[,k] - mW
   }
   res = Y-mY-t(Z1)%*%gamma
-  modelx = cv.glmnet(X1,Y1,noflds=5)
+  modelx = cv.glmnet(X1,Y1,nfolds=5)
   lambda = modelx$lambda.min
   modelx = glmnet(X1,Y1,lambda = lambda)
   beta1 = as.numeric(modelx$beta)
@@ -102,22 +102,14 @@ Inference2 = function(X,Y,spilit,seednum)#For n=200,p<=400 moderate dimensional 
   {
     D = t(matrix(D))  
   }
-  size = -1
-  apply(X,1,sd)
   ###################
   D_new = D
   n1=n=dim(D)[2]
   #####Power enhancement
   PE1 = 0
   ###########
-  record_matrix = rep(list(1),n*(n-1))
-  Dstar = rep(0,dim(D)[1])
   index_D = 1:n
-  index_r = 1:r
-  pointer = pointer1 =  1
-  dim(D)
   Tn = 0
-  r_index = 1
   trace_est = 0
   for(j in 1:n)
   {
@@ -125,15 +117,7 @@ Inference2 = function(X,Y,spilit,seednum)#For n=200,p<=400 moderate dimensional 
     { 
       temp1 = t(D[,j])%*%(D[,k])
       temp2 = t(D[,j])%*%(D[,k])
-     # gc()
-      # record_matrix[[pointer]] = temp1
       Tn  = Tn + as.numeric(temp1)
-      # pointer = pointer + 1
-      #  D_deduce = D[,-c(j,k)]
-      #  Dmean1 = apply(D_deduce,1,mean)
-      #  A1 = D[,j]-Dmean1
-      #  A2 = D[,k]-Dmean1
-      #  trace_temp = A1%*%t(D[,j])%*%A2%*%t(D[,k])
       trace_est = trace_est + as.numeric(temp2^2)
     }
   }
@@ -146,259 +130,6 @@ Inference2 = function(X,Y,spilit,seednum)#For n=200,p<=400 moderate dimensional 
   list(size_npe = size_npe,size_pe = size_pe,stat_npe = T,stat_pe = T_pe, sigma = trace_est, PE  =PE1)
 }
 ############
-
-Infer_decor_1 = function(X,Y,seed,spilit)
-{
-  X = X
-  Y = Y
-  n = dim(X)[1]
-  p = dim(X)[2]
-  if(spilit == "Once")
-  {
-    n1 = n/2
-    X1 = X[1:n1,]
-    Y1 = Y[1:n1]   
-    X = X[-c(1:n1),]
-    Y = Y[-c(1:n1)]  
-  }
-  if(spilit == "Twice")
-  {
-    n1 = n/2
-    X1 = X[-c(1:n1),]
-    Y1 = Y[-c(1:n1)]  
-    X = X[c(1:n1),]
-    Y = Y[c(1:n1)]  
-  }
-  Z = solve(t(C)%*%Omega%*%C)%*%t(C)%*%Omega%*%t(X)
-  W = t(X)-C%*%Z
-  mY = mean(Y)
-  mZ = apply(Z,1,mean)
-  mW = apply(W,1,mean)
-  Z1 = Z
-  W1 = W
-  for(k in 1:n1)
-  {
-    if(r!=1)
-    {
-      Z1[,k] = Z[,k]- mZ
-    }
-    if(r==1)
-    {
-      Z1[k] = Z[k]-mZ
-    }
-    W1[,k] = W1[,k] - mW
-  }
-  res = Y-mY-t(Z1)%*%gamma
-  modelx = cv.glmnet(X1,Y1,noflds=5)
-  lambda = modelx$lambda.min
-  modelx = glmnet(X1,Y1,lambda = lambda)
-  beta1 = as.numeric(modelx$beta)
-  res = Y-mY-t(Z1)%*%gamma - t(W1)%*%beta1 
-  Score_stat = Pvalue = NULL
-  for(kk in 1:r)
-  {
-    time0 = Sys.time()
-    ck = C[,kk]
-    Pk = ck%*%solve(t(ck)%*%ck)%*%t(ck)
-    Ak = solve(t(ck)%*%ck)%*%t(ck)
-    Zk = Ak%*%t(X)
-    gammak = gamma[kk]
-    M = diag(1,p)-Pk
-    M1 = eigen(M)$vectors[,c((p-1):(1))]
-    #t(M1)%*%M1
-    #M1%*%t(M1)
-    Zpe  = Ak%*%t(X1)
-    Wpe = Re(t(M1))%*%t(X1)
-    #t(X1)[,1]
-    #Wpe[,1]
-    Wk = Re(t(M1))%*%t(X)
-    modelx = cv.glmnet(t(Wpe),Zpe,nfolds = 5)
-    lambda = modelx$lambda.min
-    modelx = glmnet(t(Wpe), Zpe, lambda = lambda)
-    pi1 = as.numeric(modelx$beta)
-    fisher =sum(Zk^2)/n1-t(pi1)%*%(apply(t(Wk)*as.vector(Zk),2,mean))
-    res1 = Y - t(Zk)%*%gammak - t(Wk)%*%Re(t(M1))%*%beta1
-    sigmahat = t(res1)%*%res1/n1
-    res0 = as.vector(Zk) - as.vector(t(Wk)%*%pi1)
-    res = Y-t(Zk)%*%gammak - t(Wk)%*%Re(t(M1))%*%beta1
-    U = res*res0
-    Un = sum(U)/sqrt(sigmahat*n1*fisher)
-    #(X)[1,]
-    #recovery = t(Wk)%*%Re(t(M1))
-    #recovery[1,]
-    Score_stat = cbind(Score_stat, Un)
-    pvalue = 2*(1-pnorm(abs(Un)))
-    Pvalue = cbind(Pvalue,pvalue)
-    time1 = Sys.time()
-    #print(kk)
-    #  print(time1-time0)
-  }
-  asd1 = ifelse(Score_stat^2>=2*log(r) + 2*log(log(r)),Score_stat^2,0)
-  Strong = sum(asd1)
-  num = length(asd1[asd1!=0])
-  PE1 =  sqrt(r)*sum(asd1)
-  stat1 = max(Score_stat^2)
-  size_add = ifelse(stat1>=2*log(r)-log(log(r))-log(3.1415926)-2*log(log(1/0.95)),1,0)
-  reject = size_add
-  list(Strong = Strong, num = num, PE1 = PE1, reject = reject, maxstat = stat1)
-}
-
-################
-Infer_decor_2 = function(X,Y,seed,spilit)
-{
-  X = X
-  Y = Y
-  n = dim(X)[1]
-  p = dim(X)[2]
-  if(spilit == "Once")
-  {
-    n1 = n/2
-    X1 = X[1:n1,]
-    Y1 = Y[1:n1]   
-    X = X[-c(1:n1),]
-    Y = Y[-c(1:n1)]  
-  }
-  if(spilit == "Twice")
-  {
-    n1 = n/2
-    X1 = X[-c(1:n1),]
-    Y1 = Y[-c(1:n1)]  
-    X = X[c(1:n1),]
-    Y = Y[c(1:n1)]  
-  }
-  Z = solve(t(C)%*%Omega%*%C)%*%t(C)%*%Omega%*%t(X)
-  W = t(X)-C%*%Z
-  mY = mean(Y)
-  mZ = apply(Z,1,mean)
-  mW = apply(W,1,mean)
-  Z1 = Z
-  W1 = W
-  for(k in 1:n1)
-  {
-    if(r!=1)
-    {
-      Z1[,k] = Z[,k]- mZ
-    }
-    if(r==1)
-    {
-      Z1[k] = Z[k]-mZ
-    }
-    W1[,k] = W1[,k] - mW
-  }
-  modelx = cv.glmnet(X1,Y1,noflds=5)
-  lambda = modelx$lambda.min
-  modelx = glmnet(X1,Y1,lambda = lambda)
-  beta1 = as.numeric(modelx$beta)
-  res = Y-mY-t(Z1)%*%gamma
-  PC = C%*%solve(t(C)%*%C)%*%t(C)
-  M = diag(1,p)-PC
-  M1 = eigen(M)$vectors[,c((p-r):1)]
-  Zpe  = solve(t(C)%*%C)%*%t(C)%*%t(X1)
-  Wpe = Re(t(M1))%*%t(X1)
-  Zk  = solve(t(C)%*%C)%*%t(C)%*%t(X)
-  Wk = Re(t(M1))%*%t(X) 
-  Zpe1 = NULL
-  Score_stat = Pvalue = NULL
-  for(kk in 1:r)
-  {
-    Zk1 = t(Zpe)[,kk]
-    Zk2 = t(Zk)[,kk]
-    modelx = cv.glmnet(t(Wpe),Zk1,nfolds=5)
-    lambda = modelx$lambda.min
-    modelx = glmnet(t(Wpe),Zk1,lambda = lambda)
-    pi1 = as.numeric(modelx$beta)
-    fisher =sum(Zk2^2)/n1-t(pi1)%*%(apply(t(Wk)*as.vector(Zk2),2,mean))
-    res1 = Y-t(Zk)%*%gamma - t(Wk)%*%Re(t(M1))%*%beta1
-    sigmahat = t(res1)%*%res1/n1
-    res0 = as.vector(Zk2) - as.vector(t(Wk)%*%pi1)
-    res = Y-t(Zk)%*%gamma - t(Wk)%*%Re(t(M1))%*%beta1
-    U = res*res0
-    Un = sum(U)/sqrt(sigmahat*n1*fisher)
-    Score_stat = cbind(Score_stat, Un)
-    pvalue = 2*(1-pnorm(abs(Un)))
-    Pvalue = cbind(Pvalue,pvalue)
-    time1 = Sys.time()
-    #print(kk)
-  }
-  asd1 = ifelse(Score_stat^2>=2*log(r) + 2*log(log(r)),Score_stat^2,0)
-  Strong = sum(asd1)
-  num = length(asd1[asd1!=0])
-  PE1 =  sqrt(r)*sum(asd1)
-  stat1 = max(Score_stat^2)
-  size_add = ifelse(stat1>=2*log(r)-log(log(r))-log(3.1415926)-2*log(log(1/0.95)),1,0)
-  reject = size_add
-  list(Strong = Strong, num = num, PE1 = PE1, reject = reject, maxstat = stat1)
-}
-###############################
-Infer_decor_global = function(X,Y,seed,spilit)
-{
-  X = X
-  Y = Y
-  n = dim(X)[1]
-  p = dim(X)[2]
-  if(spilit == "Once")
-  {
-    n1 = n/2
-    X1 = X[1:n1,]
-    Y1 = Y[1:n1]   
-    X = X[-c(1:n1),]
-    Y = Y[-c(1:n1)]  
-  }
-  if(spilit == "Twice")
-  {
-    n1 = n/2
-    X1 = X[-c(1:n1),]
-    Y1 = Y[-c(1:n1)]  
-    X = X[c(1:n1),]
-    Y = Y[c(1:n1)]  
-  }
-  Z = solve(t(C)%*%Omega%*%C)%*%t(C)%*%Omega%*%t(X)
-  W = t(X)-C%*%Z
-  mY = mean(Y)
-  mZ = apply(Z,1,mean)
-  mW = apply(W,1,mean)
-  Z1 = Z
-  W1 = W
-  for(k in 1:n1)
-  {
-    if(r!=1)
-    {
-      Z1[,k] = Z[,k]- mZ
-    }
-    if(r==1)
-    {
-      Z1[k] = Z[k]-mZ
-    }
-    W1[,k] = W1[,k] - mW
-  }
-  Zk  = solve(t(C)%*%C)%*%t(C)%*%t(X)
-  Wk = Re(t(M1))%*%t(X) 
-  Zpe1 = NULL
-  Score_stat = Pvalue = NULL
-  for(kk in 1:r)
-  {
-    Zk2 = t(Zk)[,kk]
-    res0 = as.vector(Zk2)
-    res = Y-t(Zk)%*%gamma
-    U = res*res0
-    fisher =sum(Zk2^2)/n1
-    sigmahat = t(res)%*%res/n1
-    Un = sum(U)/sqrt(sigmahat*n1*fisher)
-    Score_stat = cbind(Score_stat, Un)
-    pvalue = 2*(1-pnorm(abs(Un)))
-    Pvalue = cbind(Pvalue,pvalue)
-    time1 = Sys.time()
-    #print(kk)
-  }
-  asd1 = ifelse(Score_stat^2>=2*log(r) + 2*log(log(r)),Score_stat^2,0)
-  Strong = sum(asd1)
-  num = length(asd1[asd1!=0])
-  PE1 =  sqrt(r)*sum(asd1)
-  stat1 = max(Score_stat^2)
-  size_add = ifelse(stat1>=2*log(r)-log(log(r))-log(3.1415926)-2*log(log(1/0.95)),1,0)
-  reject = size_add
-  list(Strong = Strong, num = num, PE1 = PE1, reject = reject, maxstat = stat1)
-}
 #######################################
 Infer_decor_full_global = function(X,Y)
 {
