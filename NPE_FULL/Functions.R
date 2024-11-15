@@ -20,7 +20,7 @@ trace = function(S)
 scad1 = function(lambda,beta)
 {
   a = 3.7
-  scaddot = ifelse(beta<=lambda,lambda,(max(a*lambda-abs(beta),0))/(a-1))
+  scaddot = ifelse(abs(beta)<=lambda,lambda,(max(a*lambda-abs(beta),0))/(a-1))
   return(scaddot)
 }
 #################User functions
