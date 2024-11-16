@@ -149,7 +149,7 @@ Infer_partial_pen = function(data_X,data_Y,C0)
   modelx = glmnet(data_X,data_Y,lambda = lambda,penalty.factor = pen_factor)
   beta_ini = as.numeric(modelx$beta)
   ###########One step sparse estimator of scad
-  pen_factor_1 = scad1(lambda,beta_ini)
+  pen_factor_1 = scad1(lambda,beta_ini)/lambda
   pen_factor_1[M!=0] = 0
   #  modelx = cv.glmnet(data_X,data_Y,nfolds=5,nlambda = 50,penalty.factor = pen_factor)
   #  lambda = modelx$lambda.min
