@@ -23,7 +23,7 @@ scad1 = function(lambda,beta)
   scaddot = ifelse(abs(beta)<=lambda,lambda,(max(a*lambda-abs(beta),0))/(a-1))
   return(scaddot)
 }
-#################User functions
+################User functions
 Inference_Npe = function(X,Y,CovMatrix,cv,M,seednum)#For n=200,p<=400 moderate dimensional cases. Otherwise can not allocate enough memory.
 {
   X = X
@@ -133,7 +133,6 @@ Inference_Npe = function(X,Y,CovMatrix,cv,M,seednum)#For n=200,p<=400 moderate d
 Infer_partial_pen = function(data_X,data_Y,C0)
 {
   active = 1:(dim(C0)[1])
-  #C = diag(length(active))
   C = t(C0)
   X = data_X
   Y = data_Y
@@ -156,7 +155,6 @@ Infer_partial_pen = function(data_X,data_Y,C0)
   modelx = glmnet(data_X,data_Y,lambda = lambda,penalty.factor = pen_factor_1)
   beta_ini = as.numeric(modelx$beta)
   a0 = modelx$a0
-  # beta_ini <- tmp$fit$beta[,tmp$min]
   S = which(beta_ini!=0)
   MM = which(M!=0)
   rindex = c(MM,S[!S%in%(MM)])
