@@ -4,7 +4,7 @@ library(MASS)
 #library(DescTools)
 print("True load")
 ##############Functions
-gen_error<-function(N,p,rho){
+gen_error<-function(N,p,rho){#Fast generation of multivariate normal distribution with AR(1) structure
   X = matrix(NA,N,p)
   X[,1] = rnorm(N)
   for(ii in 2:p){
@@ -18,7 +18,7 @@ trace = function(S)
   return(s)
 }
 #################User functions
-Inference_Npe = function(X,Y,CovMatrix,cv,M,seednum)#For n=200,p<=400 moderate dimensional cases. Otherwise can not allocate enough memory.
+Inference_Npe = function(X,Y,CovMatrix,cv,M,seednum)
 {
   X = X
   Y = as.vector(Y)

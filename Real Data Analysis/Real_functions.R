@@ -1,5 +1,5 @@
 ##############Functions
-gen_error<-function(N,p,rho){
+gen_error<-function(N,p,rho){#Fast generation of multivariate normal distribution with AR(1) structure
   X = matrix(NA,N,p)
   X[,1] = rnorm(N)
   for(ii in 2:p){
@@ -12,31 +12,8 @@ trace = function(S)
   s = sum(diag(S))
   return(s)
 }
-nullpower_append <- function(dataset, power){
-  iter = nrow(dataset)
-  dataset = dataset[,-c(1,2)]
-  take = ncol(power)
-  dataset = dataset[,c(1:(take-1))]
-  nnrow = colSums(abs(dataset) > 1.96 * 1)/iter
-  nptest = rbind(c(0,nnrow),power)
-  return(nptest)
-}
-
-z_intercept <- function(x, y, b0 = 0){
-  n = ncol(x)
-  p = nrow(x)
-  beta0 = rep(b0, p)
-  z_mat = matrix(data = NA, nrow = p, ncol = (n*(n-1)/2))
-  index = Rfast::comb_n(n, 2)
-  
-  for(i in 1:ncol(index)){
-    z_mat[,i] = (x[,index[1,i]] - x[,index[2,i]]) * (y[index[1,i]] - y[index[2,i]] - sum(beta0 *  (x[,index[1,i]] - x[,index[2,i]])))
-  }
-  
-  return(z_mat)
-}
 #################User functions
-Inference2 = function(X,Y,spilit,seednum)#For n=200,p<=400 moderate dimensional cases. Otherwise can not allocate enough memory.
+Inference2 = function(X,Y,spilit,seednum)
 {
   X = X
   Y = as.vector(Y)
@@ -95,9 +72,9 @@ Inference2 = function(X,Y,spilit,seednum)#For n=200,p<=400 moderate dimensional 
   modelx = glmnet(X1,Y1,lambda = lambda)
   beta1 = as.numeric(modelx$beta)
   res = Y-mY-t(Z1)%*%gamma - t(W1)%*%beta1 
-  res_oracle = Y-mY-t(Z1)%*%t(C)%*%beta1 - t(W1)%*%beta1
+  #res_oracle = Y-mY-t(Z1)%*%t(C)%*%beta1 - t(W1)%*%beta1
   D = sapply(1:ncol(Z),function(x) Z1[,x] * res[x])
-  D_oracle = sapply(1:ncol(Z),function(x) Z1[,x] * res[x])
+  #D_oracle = sapply(1:ncol(Z),function(x) Z1[,x] * res[x])
   if(r==1)
   {
     D = t(matrix(D))  
@@ -105,8 +82,6 @@ Inference2 = function(X,Y,spilit,seednum)#For n=200,p<=400 moderate dimensional 
   ###################
   D_new = D
   n1=n=dim(D)[2]
-  #####Power enhancement
-  PE1 = 0
   ###########
   index_D = 1:n
   Tn = 0
@@ -121,13 +96,10 @@ Inference2 = function(X,Y,spilit,seednum)#For n=200,p<=400 moderate dimensional 
       trace_est = trace_est + as.numeric(temp2^2)
     }
   }
-  W = Tn/n#(n*(n-1))
-  estTB2 = 2*(trace_est)/(n*(n-1))
+  W = Tn/n #Tn/(n*(n-1)) Asymptotically equivalent formula, see Section S.1.2
+  estTB2 = 2*(trace_est)/(n*(n-1)) #2*(trace_est)/(n*(n-1))^2
   T = W/sqrt(estTB2)
-  T_pe = T + PE1 
-  size_npe =  ifelse(abs(T)>=qnorm(0.975),1,0)
-  size_pe =  ifelse(abs(T_pe)>=qnorm(0.975),1,0)
-  list(size_npe = size_npe,size_pe = size_pe,stat_npe = T,stat_pe = T_pe, sigma = trace_est, PE  =PE1)
+  list(stat_npe = T,sigma = trace_est)
 }
 ############
 #######################################
@@ -156,14 +128,10 @@ Infer_decor_full_global = function(X,Y)
     time1 = Sys.time()
   #  print(kk)
   }
-  asd1 = ifelse(Score_stat^2>=2*log(p) + 4*log(log(p)),Score_stat^2,0)
-  Strong = sum(asd1)
-  num = length(asd1[asd1!=0])
-  PE1 =  sqrt(p)*sum(asd1)
   stat1 = max(Score_stat^2)
-  size_add = ifelse(stat1>=2*log(p)-log(log(p))-log(3.1415926)-2*log(log(1/0.95)),1,0)
+  size_add = ifelse(stat1>=2*log(p)-log(log(p))-log(3.1415926)-2*log(log(1/0.95)),1,0)#For mcl method
   reject = size_add
-  list(Strong = Strong, num = num, PE1 = PE1, reject = reject, maxstat = stat1, stat = Score_stat)
+  list(reject = reject, stat = Score_stat)
 }
 # Zhong and Chen 2011 comparison
 zhongchen2011 <- function(X, y, beta = 0, delta = 0, Sigma = NULL, small.sig = NULL, T0 = FALSE){
